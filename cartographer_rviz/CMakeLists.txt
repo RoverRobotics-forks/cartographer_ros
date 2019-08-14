@@ -29,55 +29,59 @@ endif()
 
 find_package(rosidl_default_generators REQUIRED)
 
-set(PACKAGE_DEPENDENCIES
-  eigen_conversions
-  message_runtime
-  roscpp
-  roslib
-  rviz
-)
-find_package(cartographer_ros)
-
-find_package(cartographer_ros_msgs)
-
+find_package(cartographer_ros REQUIRED)
+find_package(cartographer_ros_msgs REQUIRED)
 find_package(cartographer REQUIRED)
-include("${CARTOGRAPHER_CMAKE_DIR}/functions.cmake")
-google_initialize_cartographer_project()
 
 find_package(rviz2 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system iostreams)
 find_package(ament_cmake REQUIRED)
+find_package(rviz_common REQUIRED)
 find_package(rviz_ogre_vendor REQUIRED)
 
+include("${CARTOGRAPHER_CMAKE_DIR}/functions.cmake")
+google_initialize_cartographer_project()
 
 set(CMAKE_AUTOMOC ON)
-
 find_package(Qt5 REQUIRED Core Widgets)
-set(QT_LIBRARIES Qt5::Widgets)
-include_directories(${Qt5Widgets_INCLUDE_DIRS})
-
 
 add_library(${PROJECT_NAME}
   cartographer_rviz/drawable_submap.cc
   cartographer_rviz/ogre_slice.cc
-  cartographer_rviz/submaps_display.cc)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${QT_LIBRARIES})
+  cartographer_rviz/submaps_display.cc
+
+  cartographer_rviz/drawable_submap.h
+  cartographer_rviz/ogre_slice.h
+  cartographer_rviz/submaps_display.h)
+target_include_directories(${PROJECT_NAME} PRIVATE ${Qt5Widgets_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PUBLIC .)
+target_link_libraries(${PROJECT_NAME}
+  Qt5::Widgets
+  rviz_common::rviz_common
+  cartographer)
 
 add_definitions(-DQT_NO_KEYWORDS)
 
-# Add the binary directory first, so that port.h is included after it has
-# been generated.
-target_include_directories(${PROJECT_NAME} PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include>
-)
+#target_include_directories(${PROJECT_NAME} PUBLIC
+#    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+#    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+#    $<INSTALL_INTERFACE:include>
+#)
+
 ament_target_dependencies(${PROJECT_NAME}
+  cartographer_ros
   cartographer_ros_msgs
   Boost
   cartographer
   Eigen3
+  rviz_common
+#  eigen_conversions
+#  message_runtime
+#  roscpp
+#  roslib
+#  rviz2
+  Qt5
   )
 #
 #target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
@@ -88,11 +92,8 @@ ament_target_dependencies(${PROJECT_NAME}
 #  "${Boost_INCLUDE_DIRS}")
 #target_link_libraries(${PROJECT_NAME} PUBLIC ${Boost_LIBRARIES})
 
-set(TARGET_COMPILE_FLAGS "${TARGET_COMPILE_FLAGS} ${GOOG_CXX_FLAGS}")
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  COMPILE_FLAGS ${TARGET_COMPILE_FLAGS})
-
-target_link_libraries(${PROJECT_NAME} PUBLIC cartographer)
+  COMPILE_FLAGS ${GOOG_CXX_FLAGS})
 
 #install(TARGETS ${PROJECT_NAME}
 #  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -108,5 +109,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC cartographer)
 #  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 #)
 
-ament_export_dependencies(message_runtime)
+ament_export_dependencies(
+  Qt5
+  message_runtime
+)
 ament_package()

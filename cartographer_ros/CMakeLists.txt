@@ -167,6 +167,13 @@ install(TARGETS
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
 
+install(FILES
+  cartographer_ros/submap.h
+  cartographer_ros/msg_conversion.h
+
+  DESTINATION include/${PROJECT_NAME}
+  )
+
 # # Install source headers.
 # file(GLOB_RECURSE HDRS "*.h")
 # foreach(HDR ${HDRS})

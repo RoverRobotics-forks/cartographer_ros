@@ -20,15 +20,15 @@
 #include "cartographer/common/make_unique.h"
 #include "cartographer/common/mutex.h"
 #include "cartographer/mapping/id.h"
-#include "cartographer_ros_msgs/SubmapList.h"
-#include "cartographer_ros_msgs/SubmapQuery.h"
-#include "geometry_msgs/TransformStamped.h"
+#include "cartographer_ros_msgs/msg/submap_list.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"
 #include "pluginlib/class_list_macros.h"
 #include "ros/package.h"
-#include "rviz/display_context.h"
-#include "rviz/frame_manager.h"
-#include "rviz/properties/bool_property.h"
-#include "rviz/properties/string_property.h"
+
+#include "rviz_common/display_context.hpp"
+#include "rviz_common/frame_manager_iface.hpp"
+#include "rviz_common/properties/bool_property.hpp"
+#include "rviz_common/properties/string_property.hpp"
 
 namespace cartographer_rviz {
 
@@ -43,29 +43,35 @@ constexpr char kDefaultSubmapQueryServiceName[] = "/submap_query";
 
 }  // namespace
 
-SubmapsDisplay::SubmapsDisplay() : tf_listener_(tf_buffer_) {
-  submap_query_service_property_ = new ::rviz::StringProperty(
+using rviz_common::properties::StringProperty;
+using rviz_common::properties::BoolProperty;
+using rviz_common::properties::Property;
+using rviz_common::properties::FloatProperty;
+
+
+SubmapsDisplay::SubmapsDisplay() {
+  submap_query_service_property_ = new StringProperty(
       "Submap query service", kDefaultSubmapQueryServiceName,
       "Submap query service to connect to.", this, SLOT(Reset()));
-  tracking_frame_property_ = new ::rviz::StringProperty(
+  tracking_frame_property_ = new StringProperty(
       "Tracking frame", kDefaultTrackingFrame,
       "Tracking frame, used for fading out submaps.", this);
-  slice_high_resolution_enabled_ = new ::rviz::BoolProperty(
+  slice_high_resolution_enabled_ = new BoolProperty(
       "High Resolution", true, "Display high resolution slices.", this,
       SLOT(ResolutionToggled()), this);
-  slice_low_resolution_enabled_ = new ::rviz::BoolProperty(
+  slice_low_resolution_enabled_ = new BoolProperty(
       "Low Resolution", false, "Display low resolution slices.", this,
       SLOT(ResolutionToggled()), this);
-  client_ = update_nh_.serviceClient<::cartographer_ros_msgs::SubmapQuery>("");
-  trajectories_category_ = new ::rviz::Property(
+
+  trajectories_category_ = new Property(
       "Submaps", QVariant(), "List of all submaps, organized by trajectories.",
       this);
-  visibility_all_enabled_ = new ::rviz::BoolProperty(
+  visibility_all_enabled_ = new BoolProperty(
       "All", true,
       "Whether submaps from all trajectories should be displayed or not.",
       trajectories_category_, SLOT(AllEnabledToggled()), this);
   fade_out_start_distance_in_meters_ =
-      new ::rviz::FloatProperty("Fade-out distance", 1.f,
+      new FloatProperty("Fade-out distance", 1.f,
                                 "Distance in meters in z-direction beyond "
                                 "which submaps will start to fade out.",
                                 this);
@@ -82,7 +88,7 @@ SubmapsDisplay::SubmapsDisplay() : tf_listener_(tf_buffer_) {
 }
 
 SubmapsDisplay::~SubmapsDisplay() {
-  client_.shutdown();
+  client_.reset();
   trajectories_.clear();
   scene_manager_->destroySceneNode(map_node_);
 }
@@ -90,8 +96,7 @@ SubmapsDisplay::~SubmapsDisplay() {
 void SubmapsDisplay::Reset() { reset(); }
 
 void SubmapsDisplay::CreateClient() {
-  client_ = update_nh_.serviceClient<::cartographer_ros_msgs::SubmapQuery>(
-      submap_query_service_property_->getStdString());
+  client_ = rviz_ros_node_.lock()->get_raw_node()->create_client<cartographer_ros_msgs::srv::SubmapQuery>(submap_query_service_property_->getStdString());
 }
 
 void SubmapsDisplay::onInitialize() {
@@ -103,19 +108,19 @@ void SubmapsDisplay::onInitialize() {
 void SubmapsDisplay::reset() {
   MFDClass::reset();
   ::cartographer::common::MutexLocker locker(&mutex_);
-  client_.shutdown();
+  client_.reset();
   trajectories_.clear();
   CreateClient();
 }
 
 void SubmapsDisplay::processMessage(
-    const ::cartographer_ros_msgs::SubmapList::ConstPtr& msg) {
+    const cartographer_ros_msgs::msg::SubmapList& msg) {
   ::cartographer::common::MutexLocker locker(&mutex_);
   map_frame_ =
       ::cartographer::common::make_unique<std::string>(msg->header.frame_id);
   // In case Cartographer node is relaunched, destroy trajectories from the
   // previous instance.
-  for (const ::cartographer_ros_msgs::SubmapEntry& submap_entry : msg->submap) {
+  for (const cartographer_ros_msgs::msg::SubmapEntry& submap_entry : msg->submap) {
     const size_t trajectory_id = submap_entry.trajectory_id;
     if (trajectory_id >= trajectories_.size()) {
       continue;
@@ -131,7 +136,7 @@ void SubmapsDisplay::processMessage(
   }
   using ::cartographer::mapping::SubmapId;
   std::set<SubmapId> listed_submaps;
-  for (const ::cartographer_ros_msgs::SubmapEntry& submap_entry : msg->submap) {
+  for (const cartographer_ros_msgs::msg::SubmapEntry& submap_entry : msg->submap) {
     const SubmapId id{submap_entry.trajectory_id, submap_entry.submap_index};
     listed_submaps.insert(id);
     while (id.trajectory_id >= static_cast<int>(trajectories_.size())) {
@@ -205,7 +210,7 @@ void SubmapsDisplay::update(const float wall_dt, const float ros_dt) {
   // Update the fading by z distance.
   const ros::Time kLatest(0);
   try {
-    const ::geometry_msgs::TransformStamped transform_stamped =
+    const geometry_msgs::msg::TransformStamped transform_stamped =
         tf_buffer_.lookupTransform(
             *map_frame_, tracking_frame_property_->getStdString(), kLatest);
     for (auto& trajectory : trajectories_) {
@@ -241,7 +246,7 @@ void SubmapsDisplay::ResolutionToggled() {
   ::cartographer::common::MutexLocker locker(&mutex_);
   for (auto& trajectory : trajectories_) {
     for (auto& submap_entry : trajectory->submaps) {
-      submap_entry.second->SetSliceVisibility(
+        submap_entry.second->SetSliceVisibility(
           0, slice_high_resolution_enabled_->getBool());
       submap_entry.second->SetSliceVisibility(
           1, slice_low_resolution_enabled_->getBool());
@@ -256,7 +261,7 @@ void Trajectory::AllEnabledToggled() {
   }
 }
 
-Trajectory::Trajectory(std::unique_ptr<::rviz::BoolProperty> property)
+Trajectory::Trajectory(std::unique_ptr<BoolProperty> property)
     : visibility(std::move(property)) {
   ::QObject::connect(visibility.get(), SIGNAL(changed()), this,
                      SLOT(AllEnabledToggled()));

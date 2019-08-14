@@ -44,9 +44,9 @@ constexpr int kNumberOfSlicesPerSubmap = 2;
 }  // namespace
 
 DrawableSubmap::DrawableSubmap(const ::cartographer::mapping::SubmapId& id,
-                               ::rviz::DisplayContext* const display_context,
+                               rviz_common::DisplayContext* const display_context,
                                Ogre::SceneNode* const map_node,
-                               ::rviz::Property* const submap_category,
+                               rviz_common::properties::Property* const submap_category,
                                const bool visible, const float pose_axes_length,
                                const float pose_axes_radius)
     : id_(id),
@@ -69,13 +69,13 @@ DrawableSubmap::DrawableSubmap(const ::cartographer::mapping::SubmapId& id,
   // (a unique_ptr is needed because the Qt parent of the visibility
   // property is the submap_category object - the BoolProperty needs
   // to be destroyed along with the DrawableSubmap)
-  visibility_ = ::cartographer::common::make_unique<::rviz::BoolProperty>(
+  visibility_ = ::cartographer::common::make_unique<rviz_common::properties::BoolProperty>(
       "" /* title */, visible, "" /* description */, submap_category,
       SLOT(ToggleVisibility()), this);
   submap_id_text_.setCharacterHeight(kSubmapIdCharHeight);
   submap_id_text_.setColor(kSubmapIdColor);
-  submap_id_text_.setTextAlignment(::rviz::MovableText::H_CENTER,
-                                   ::rviz::MovableText::V_ABOVE);
+  submap_id_text_.setTextAlignment(
+    rviz_rendering::MovableText::H_CENTER,rviz_rendering::MovableText::V_ABOVE);
   // TODO(jihoonl): Make it toggleable.
   submap_id_text_node_->setPosition(ToOgre(kSubmapIdPosition));
   submap_id_text_node_->attachObject(&submap_id_text_);
@@ -93,8 +93,8 @@ DrawableSubmap::~DrawableSubmap() {
 }
 
 void DrawableSubmap::Update(
-    const ::std_msgs::Header& header,
-    const ::cartographer_ros_msgs::SubmapEntry& metadata) {
+    const std_msgs::msg::Header& header,
+    const cartographer_ros_msgs::msg::SubmapEntry& metadata) {
   ::cartographer::common::MutexLocker locker(&mutex_);
   metadata_version_ = metadata.submap_version;
   pose_ = ::cartographer_ros::ToRigid3d(metadata.pose);
