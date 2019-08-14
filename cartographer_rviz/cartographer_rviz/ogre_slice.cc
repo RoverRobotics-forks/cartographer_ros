@@ -19,8 +19,8 @@
 #include <string>
 #include <vector>
 
-#include "OgreGpuProgramParams.h"
-#include "OgreImage.h"
+#include "OGRE/OgreGpuProgramParams.h"
+#include "OGRE/OgreImage.h"
 #include "cartographer/common/port.h"
 
 namespace cartographer_rviz {

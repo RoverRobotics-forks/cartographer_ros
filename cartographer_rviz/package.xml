@@ -34,22 +34,20 @@
     The Cartographer Authors
   </author>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
   <build_depend>g++-static</build_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
   <depend version_gte="1.0.0">cartographer</depend>
   <depend version_gte="1.0.0">cartographer_ros</depend>
-  <depend version_gte="1.0.0">cartographer_ros_msgs</depend>
-  <depend>eigen_conversions</depend>
+  <depend version_gte="2.1.1">cartographer_ros_msgs</depend>
   <depend>libqt5-core</depend>
   <depend>libqt5-gui</depend>
   <depend>libqt5-widgets</depend>
-  <depend>message_runtime</depend>
   <depend>qtbase5-dev</depend>
-  <depend>roscpp</depend>
-  <depend>roslib</depend>
-  <depend>rviz</depend>
+  <depend>rviz2</depend>
+
 
   <export>
       <rviz plugin="${prefix}/rviz_plugin_description.xml" />

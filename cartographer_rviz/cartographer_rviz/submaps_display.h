@@ -21,10 +21,11 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <QtCore/QArgument>
 
 #include "cartographer/common/mutex.h"
 #include "cartographer/common/port.h"
-#include "cartographer_ros_msgs/SubmapList.h"
+#include "cartographer_ros_msgs/msg/submap_list.hpp"
 #include "cartographer_rviz/drawable_submap.h"
 #include "rviz/message_filter_display.h"
 #include "rviz/properties/bool_property.h"
@@ -57,7 +58,7 @@ struct Trajectory : public QObject {
 // every submap containing pre-multiplied alpha and grayscale values, these are
 // then alpha blended together.
 class SubmapsDisplay
-    : public ::rviz::MessageFilterDisplay<::cartographer_ros_msgs::SubmapList> {
+    : public ::rviz::MessageFilterDisplay<cartographer_ros_msgs::msg::SubmapList> {
   Q_OBJECT
 
  public:
@@ -79,7 +80,7 @@ class SubmapsDisplay
   void onInitialize() override;
   void reset() override;
   void processMessage(
-      const ::cartographer_ros_msgs::SubmapList::ConstPtr& msg) override;
+      const cartographer_ros_msgs::msg::SubmapList::ConstPtr& msg) override;
   void update(float wall_dt, float ros_dt) override;
 
   ::tf2_ros::Buffer tf_buffer_;

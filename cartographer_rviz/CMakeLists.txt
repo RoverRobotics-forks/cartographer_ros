@@ -12,50 +12,58 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 2.8.12)  # Ships with Ubuntu 14.04 (Trusty)
+cmake_minimum_required(VERSION 3.5)
 
 project(cartographer_rviz)
 
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # we dont use add_compile_options with pedantic in message packages
+  # because the Python C extensions dont comply with it
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic")
+endif()
+
+find_package(rosidl_default_generators REQUIRED)
+
 set(PACKAGE_DEPENDENCIES
-  cartographer_ros
-  cartographer_ros_msgs
   eigen_conversions
   message_runtime
   roscpp
   roslib
   rviz
 )
+find_package(cartographer_ros)
+
+find_package(cartographer_ros_msgs)
 
 find_package(cartographer REQUIRED)
 include("${CARTOGRAPHER_CMAKE_DIR}/functions.cmake")
 google_initialize_cartographer_project()
 
+find_package(rviz2 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system iostreams)
-find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPENDENCIES})
+find_package(ament_cmake REQUIRED)
+find_package(rviz_ogre_vendor REQUIRED)
 
-catkin_package(
-  CATKIN_DEPENDS
-    message_runtime
-    ${PACKAGE_DEPENDENCIES}
-  INCLUDE_DIRS "."
-)
 
-file(GLOB_RECURSE ALL_SRCS "*.cc" "*.h")
 set(CMAKE_AUTOMOC ON)
-add_library(${PROJECT_NAME} ${ALL_SRCS})
+
+find_package(Qt5 REQUIRED Core Widgets)
+set(QT_LIBRARIES Qt5::Widgets)
+include_directories(${Qt5Widgets_INCLUDE_DIRS})
+
+
+add_library(${PROJECT_NAME}
+  cartographer_rviz/drawable_submap.cc
+  cartographer_rviz/ogre_slice.cc
+  cartographer_rviz/submaps_display.cc)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${QT_LIBRARIES})
 
-if(rviz_QT_VERSION VERSION_LESS "5")
-  message(STATUS "Using Qt4 based on the rviz_QT_VERSION: ${rviz_QT_VERSION}")
-  find_package(Qt4 ${rviz_QT_VERSION} EXACT REQUIRED QtCore QtGui)
-  include(${QT_USE_FILE})
-else()
-  message(STATUS "Using Qt5 based on the rviz_QT_VERSION: ${rviz_QT_VERSION}")
-  find_package(Qt5 ${rviz_QT_VERSION} EXACT REQUIRED Core Widgets)
-  set(QT_LIBRARIES Qt5::Widgets)
-  include_directories(${Qt5Widgets_INCLUDE_DIRS})
-endif()
 add_definitions(-DQT_NO_KEYWORDS)
 
 # Add the binary directory first, so that port.h is included after it has
@@ -65,18 +73,20 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
 )
-
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
-  "${EIGEN3_INCLUDE_DIR}")
-target_link_libraries(${PROJECT_NAME} PUBLIC ${EIGEN3_LIBRARIES})
-
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
-  "${Boost_INCLUDE_DIRS}")
-target_link_libraries(${PROJECT_NAME} PUBLIC ${Boost_LIBRARIES})
-
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${catkin_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${catkin_LIBRARIES})
-add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+ament_target_dependencies(${PROJECT_NAME}
+  cartographer_ros_msgs
+  Boost
+  cartographer
+  Eigen3
+  )
+#
+#target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
+#  "${EIGEN3_INCLUDE_DIR}")
+#target_link_libraries(${PROJECT_NAME} PUBLIC ${EIGEN3_LIBRARIES})
+#
+#target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
+#  "${Boost_INCLUDE_DIRS}")
+#target_link_libraries(${PROJECT_NAME} PUBLIC ${Boost_LIBRARIES})
 
 set(TARGET_COMPILE_FLAGS "${TARGET_COMPILE_FLAGS} ${GOOG_CXX_FLAGS}")
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -84,16 +94,19 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 target_link_libraries(${PROJECT_NAME} PUBLIC cartographer)
 
-install(TARGETS ${PROJECT_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+#install(TARGETS ${PROJECT_NAME}
+#  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+#)
 
-install(FILES rviz_plugin_description.xml
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
+#install(FILES rviz_plugin_description.xml
+#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+#)
+#
+#install(DIRECTORY ogre_media
+#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+#)
 
-install(DIRECTORY ogre_media
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
+ament_export_dependencies(message_runtime)
+ament_package()

@@ -16,7 +16,7 @@
 
 #include "cartographer_rviz/submaps_display.h"
 
-#include "OgreResourceGroupManager.h"
+#include "OGRE/OgreResourceGroupManager.h"
 #include "cartographer/common/make_unique.h"
 #include "cartographer/common/mutex.h"
 #include "cartographer/mapping/id.h"
@@ -25,7 +25,6 @@
 #include "geometry_msgs/TransformStamped.h"
 #include "pluginlib/class_list_macros.h"
 #include "ros/package.h"
-#include "ros/ros.h"
 #include "rviz/display_context.h"
 #include "rviz/frame_manager.h"
 #include "rviz/properties/bool_property.h"
